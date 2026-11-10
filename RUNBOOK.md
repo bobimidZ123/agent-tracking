@@ -23,7 +23,7 @@ You only do this the first time.
 4. **The brief timer** on the devbox, which sends the morning brief at 08:00 Kyiv ([how it works](HOW-IT-WORKS.md#the-morning-brief)):
    1. `claude` installed and logged in, with the same settings you work with (it runs in auto mode and reads production the way your sessions do), and `gh` logged in.
    2. `~/.config/agent-tracking/telegram.env`, mode 600, with `TELEGRAM_BOT_TOKEN=…` and `TELEGRAM_CHAT_ID=…`. The brief and the failure alert are sent with it.
-   3. **On a Mac**, run `scheduler/macos/install.sh` instead: a launchd agent at the local hour that is 08:00 Kyiv, logging to `~/Library/Logs/agent-tracking/brief.log`, with the same failure alert. Test it with `launchctl kickstart gui/$(id -u)/com.agent-tracking.brief`. A Mac asleep at that hour sends the brief on waking; one that is shut down skips the day. Skip the next step.
+   3. **On a Mac**, run `scheduler/macos/install.sh` instead (another time: `BRIEF_TZ=Europe/Moscow BRIEF_HOUR=17 scheduler/macos/install.sh`). It installs a launchd agent that sends the brief once a day at the first hourly run at or after that time, in that zone, whatever the Mac's own zone and summer time do. A Mac asleep or off at that hour sends it once it is back. Log: `~/Library/Logs/agent-tracking/brief.log`; test with `scheduler/macos/run-brief.sh --now`. Skip the next step.
    4. `~/projects/agent-tracking/scheduler/install.sh`. It installs a systemd user timer, and creates `~/.config/agent-tracking/repos`, the list of repos the brief covers. Then test it **through systemd**, as the script prints. A run from your own shell can pass while the timer fails, as [HOW-IT-WORKS](HOW-IT-WORKS.md#the-morning-brief) explains.
 
 ## Per project

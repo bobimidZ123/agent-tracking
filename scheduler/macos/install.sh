@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Install (or update) the morning brief on macOS as a launchd user agent: the
+# Install (or update) the daily brief on macOS as a launchd user agent: the
 # systemd timer in ../install.sh, for a Mac.
 #
-#   scheduler/macos/install.sh
+#   scheduler/macos/install.sh                          # 08:00 Kyiv, as on the devbox
+#   BRIEF_TZ=Europe/Moscow BRIEF_HOUR=17 scheduler/macos/install.sh
 #
-# Runs every day at the local hour that is 08:00 in Kyiv, computed now. Kyiv and
-# the rest of the EU switch to summer time on the same dates, so the hour holds
-# all year in an EU time zone; re-run this after moving to another zone.
-# A Mac asleep at that hour runs it on waking; a Mac that is shut down skips it.
+# The time is kept in BRIEF_TZ itself, not converted to local time, so it holds
+# when the local zone and BRIEF_TZ switch to summer time on different dates (or
+# one of them never does). See run-brief.sh for how a day's single run is chosen.
 # Needs: node, claude and gh installed for this user;
 # ~/.config/agent-tracking/telegram.env (TELEGRAM_BOT_TOKEN=…, TELEGRAM_CHAT_ID=…).
 set -euo pipefail
@@ -18,7 +18,11 @@ REPOS="${AGENT_TRACKING_REPOS:-$CONF/repos}"
 LABEL=com.agent-tracking.brief
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOGDIR="$HOME/Library/Logs/agent-tracking"
+BRIEF_TZ="${BRIEF_TZ:-Europe/Kyiv}"
+BRIEF_HOUR="${BRIEF_HOUR:-8}"
 
+[[ -e "/usr/share/zoneinfo/$BRIEF_TZ" ]] || { echo "unknown time zone: $BRIEF_TZ" >&2; exit 1; }
+[[ "$BRIEF_HOUR" =~ ^([0-9]|1[0-9]|2[0-3])$ ]] || { echo "BRIEF_HOUR must be 0–23" >&2; exit 1; }
 NODE="$(command -v node || true)"
 CLAUDE="$(command -v claude || true)"
 GH="$(command -v gh || true)"
@@ -28,26 +32,21 @@ GH="$(command -v gh || true)"
 # claude's own directory, not the versioned binary it links to, which moves on update.
 RUN_PATH="$(dirname "$NODE"):$(dirname "$CLAUDE"):$(dirname "$GH"):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
-# The local hour at which it is 08:00 in Kyiv today.
-offset_min() { local z; z=$(TZ="$1" date +%z); echo $(( (10#${z:1:2} * 60 + 10#${z:3:2}) * (${z:0:1}1) )); }
-diff=$(( $(offset_min Europe/Kyiv) - $(offset_min "$(readlink /etc/localtime | sed 's#.*/zoneinfo/##')") ))
-(( diff % 60 == 0 )) || { echo "local time zone is not a whole number of hours from Kyiv" >&2; exit 1; }
-HOUR=$(( ((8 * 60 - diff) / 60 % 24 + 24) % 24 ))
-
 mkdir -p "$(dirname "$PLIST")" "$LOGDIR" "$(dirname "$REPOS")"
 chmod +x "$KIT/scheduler/macos/run-brief.sh" "$KIT/scheduler/notify-failure.sh"
-sed -e "s#%KIT%#$KIT#g" -e "s#%PATH%#$RUN_PATH#g" -e "s#%HOME%#$HOME#g" -e "s#%HOUR%#$HOUR#g" -e "s#%LOGDIR%#$LOGDIR#g" \
+sed -e "s#%KIT%#$KIT#g" -e "s#%PATH%#$RUN_PATH#g" -e "s#%HOME%#$HOME#g" -e "s#%LOGDIR%#$LOGDIR#g" \
+    -e "s#%BRIEF_TZ%#$BRIEF_TZ#g" -e "s#%BRIEF_HOUR%#$BRIEF_HOUR#g" \
   "$KIT/scheduler/macos/$LABEL.plist" >"$PLIST"
 plutil -lint "$PLIST" >/dev/null
 
 if [[ ! -e "$REPOS" ]]; then
-  printf '# Repos the morning brief covers: owner/name [checkout] [title], one per line.\n' >"$REPOS"
+  printf '# Repos the brief covers: owner/name [checkout] [title], one per line.\n' >"$REPOS"
   echo "created $REPOS — add owner/name lines to it"
 fi
 [[ -r "$CONF/telegram.env" ]] || echo "warning: no $CONF/telegram.env, so the brief cannot be sent and a failure sends no alert"
 
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
-echo "installed $PLIST: every day at $(printf '%02d' "$HOUR"):00 local (08:00 Kyiv)"
+echo "installed $PLIST: once a day from $(printf '%02d' "$BRIEF_HOUR"):00 $BRIEF_TZ (now $(TZ="$BRIEF_TZ" date '+%H:%M') there)"
 echo "Test it the way launchd runs it (this runs the agents and sends the brief):"
-echo "  launchctl kickstart gui/$(id -u)/$LABEL; sleep 5; tail -f $LOGDIR/brief.log"
+echo "  $KIT/scheduler/macos/run-brief.sh --now; tail -30 $LOGDIR/brief.log"

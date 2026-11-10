@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- The morning brief on macOS. Installed by scheduler/macos/install.sh, which
-     fills in the paths and the local hour that is 08:00 in Kyiv. -->
+<!-- The daily brief on macOS. Installed by scheduler/macos/install.sh, which fills
+     in the paths and the brief's time zone and hour. launchd only knows local time,
+     and the local zone may switch to summer time when the brief's zone does not,
+     so this fires every hour on the hour and run-brief.sh decides: it sends once
+     a day, at the first run at or after BRIEF_HOUR in BRIEF_TZ. A Mac asleep at
+     that hour sends it on waking; one that is shut down sends it once it is back. -->
 <plist version="1.0">
 <dict>
   <key>Label</key>
@@ -17,15 +21,21 @@
     <string>%PATH%</string>
     <key>HOME</key>
     <string>%HOME%</string>
+    <key>BRIEF_TZ</key>
+    <string>%BRIEF_TZ%</string>
+    <key>BRIEF_HOUR</key>
+    <string>%BRIEF_HOUR%</string>
+    <!-- The brief's own dates (today, Monday, due dates) follow the same zone. -->
+    <key>DIGEST_TZ</key>
+    <string>%BRIEF_TZ%</string>
   </dict>
-  <!-- launchd runs a missed time once the Mac wakes; a Mac that was shut down skips it. -->
   <key>StartCalendarInterval</key>
   <dict>
-    <key>Hour</key>
-    <integer>%HOUR%</integer>
     <key>Minute</key>
     <integer>0</integer>
   </dict>
+  <key>RunAtLoad</key>
+  <true/>
   <key>StandardOutPath</key>
   <string>%LOGDIR%/launchd.out.log</string>
   <key>StandardErrorPath</key>
