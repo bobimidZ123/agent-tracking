@@ -23,9 +23,9 @@ Every moving part of the tracking setup, where it runs, what starts it, and what
 | Piece | Lives in | Started by | Needs |
 | --- | --- | --- | --- |
 | Rules for agents | each repo's `AGENTS.md`, between the `agent-tracking` markers, plus its own "Work tracking in this repo" section | read by every agent at session start | nothing |
-| Jira mirror | `jira-sync/` here; `.github/workflows/tracking-jira-sync.yml` in each repo | every issue event (opened, edited, labeled, closed…), or by hand for `discover` / `backfill` | secrets `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`; variable `JIRA_PROJECT_KEY` (unset = off) |
+| Jira mirror | `jira-sync/` here; `.github/workflows/tracking-jira-sync.yml` in each repo | every issue event (opened, edited, labeled, closed…), or by hand for `discover` / `backfill` | secrets `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`; variable `JIRA_PROJECT_KEY` (unset = off); `JIRA_SCOPE` when repos share a project |
 | Cleanup on close | `.github/workflows/tracking-on-close.yml` in each repo | an issue closing | nothing |
-| Morning brief | `brief/` here, run on the devbox | the devbox timer, 08:00 Kyiv, every day | `claude` logged in; `~/.config/agent-tracking/repos`; `~/.config/agent-tracking/telegram.env`; a checkout of each repo |
+| Morning brief | `brief/` here, run on the devbox or a Mac | the devbox timer (systemd) or a launchd agent on a Mac, 08:00 Kyiv, every day | `claude` logged in; `~/.config/agent-tracking/repos`; `~/.config/agent-tracking/telegram.env`; a checkout of each repo |
 | PR ↔ issue check | `.github/workflows/tracking-issue-link.yml` in each repo | every PR | nothing; it only warns, never fails |
 | Labels | `labels.tsv` here, plus each repo's `.github/tracking-labels.tsv` | `labels.sh`, by hand | `gh` |
 

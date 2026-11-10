@@ -4,7 +4,7 @@ name: Tracking cleanup on close
 # `blocked`, and a leading `**Waiting on:** … · **Recheck:** …` line, whoever
 # closed it (an agent, a PR's `Fixes #N`, or the user by hand). `verify` and
 # its Verify line stay: they belong on a closed fix. Installed by
-# https://github.com/BohdanMoroz11/agent-tracking — change it there and re-run
+# https://github.com/bobimidZ123/agent-tracking — change it there and re-run
 # install, not here.
 on:
   issues:

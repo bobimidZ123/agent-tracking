@@ -1,7 +1,7 @@
 name: Jira sync
 
 # One-way mirror of this repo's GitHub issues into Jira. GitHub is the source
-# of truth. Installed by https://github.com/BohdanMoroz11/agent-tracking —
+# of truth. Installed by https://github.com/bobimidZ123/agent-tracking —
 # change it there and re-run install, not here.
 #
 # Issue events sync only once the JIRA_PROJECT_KEY repo variable is set
@@ -38,7 +38,7 @@ jobs:
     if: vars.JIRA_PROJECT_KEY != '' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
-      - uses: BohdanMoroz11/agent-tracking/jira-sync@v1
+      - uses: bobimidZ123/agent-tracking/jira-sync@v1
         with:
           mode: ${{ github.event_name == 'issues' && 'event' || inputs.mode }}
           dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
@@ -47,3 +47,4 @@ jobs:
           jira-api-token: ${{ secrets.JIRA_API_TOKEN }}
           jira-project-key: ${{ inputs.project_key || vars.JIRA_PROJECT_KEY }}
           jira-assignee-account-id: ${{ vars.JIRA_ASSIGNEE_ACCOUNT_ID }}
+          jira-scope: ${{ vars.JIRA_SCOPE }}

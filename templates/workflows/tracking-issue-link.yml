@@ -2,7 +2,7 @@ name: Issue link
 
 # Non-blocking: annotates a PR that references no issue, as a reminder of the
 # work-tracking rule in AGENTS.md. It never fails the build. Installed by
-# https://github.com/BohdanMoroz11/agent-tracking — change it there and
+# https://github.com/bobimidZ123/agent-tracking — change it there and
 # re-run install, not here.
 on:
   pull_request:

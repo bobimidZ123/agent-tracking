@@ -9,7 +9,12 @@
 //   DRY_RUN=true node jira-sync.mjs …    # log what would change, write nothing
 //
 // Env: JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY, JIRA_ASSIGNEE_ACCOUNT_ID (optional),
-//      GITHUB_TOKEN, GITHUB_REPOSITORY. The token is never printed.
+//      JIRA_SCOPE (optional), GITHUB_TOKEN, GITHUB_REPOSITORY. The token is never printed.
+//
+// JIRA_SCOPE lets several repos share one Jira project. Without it the twin label
+// is `gh-<number>`, which two repos would both claim for their issue #7. With it
+// (say `backend`) the label is `gh-backend-7`, the scope is a label of its own,
+// and the summary starts with `[backend]`.
 import { readFileSync } from 'node:fs';
 
 const env = name => {
@@ -28,19 +33,24 @@ export const PRIORITY_BY_LABEL = { p1: 'High', p2: 'Medium', p3: 'Low' }; // unl
 // Jira labels cannot contain spaces; `tenant:acme` becomes `tenant-acme`.
 export const jiraLabel = l => l.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
 
-export function mapIssue(gh) {
+// A scope must survive as one Jira label: letters, digits, `_` and `-`.
+export const scopeOf = s => jiraLabel(s ?? '');
+export const twinLabel = (number, scope = '') => (scope ? `gh-${scope}-${number}` : `gh-${number}`);
+
+export function mapIssue(gh, scope = '') {
   const labels = gh.labels.map(l => (typeof l === 'string' ? l : l.name));
   const type = labels.map(l => TYPE_BY_LABEL[l]).find(Boolean) ?? 'Task';
   const state =
     gh.state.toLowerCase() === 'closed'
       ? 'closed'
       : ['now', 'blocked', 'next'].find(s => labels.includes(s)) ?? 'later';
-  const jiraLabels = ['github', `gh-${gh.number}`, ...labels.map(jiraLabel).filter(Boolean)];
+  const jiraLabels = ['github', ...(scope ? [scope] : []), twinLabel(gh.number, scope), ...labels.map(jiraLabel).filter(Boolean)];
   const reason = (gh.state_reason ?? gh.stateReason ?? '').toLowerCase();
   if (state === 'closed' && reason === 'not_planned') jiraLabels.push('not-now');
   return {
     number: gh.number,
-    summary: `${gh.title} (#${gh.number})`.slice(0, 250),
+    summary: `${scope ? `[${scope}] ` : ''}${gh.title} (#${gh.number})`.slice(0, 250),
+    twin: twinLabel(gh.number, scope),
     type,
     status: STATUS[state],
     priority: labels.map(l => PRIORITY_BY_LABEL[l]).find(Boolean) ?? null,
@@ -151,14 +161,14 @@ export const TWIN_MARK = /^Mirrored to Jira as \[([A-Z][A-Z0-9]*-\d+)\]/;
 // script leaves on the GitHub issue: GitHub reads are consistent at once, while
 // Jira search can lag a few seconds, and an issue created with labels fires
 // `opened` and `labeled` back to back. The label search is the fallback.
-async function findTwin(project, number) {
+async function findTwin(project, number, label) {
   const comments = await githubAll(`/repos/${env('GITHUB_REPOSITORY')}/issues/${number}/comments`);
   const mark = comments.map(c => c.body?.match(TWIN_MARK)).find(Boolean);
   if (mark) {
     return jira('GET', `/rest/api/3/issue/${mark[1]}?fields=summary,status,issuetype,labels,assignee,priority`);
   }
   const r = await jira('POST', '/rest/api/3/search/jql', {
-    jql: `project = "${project}" AND labels = "gh-${number}"`,
+    jql: `project = "${project}" AND labels = "${label}"`,
     fields: ['summary', 'status', 'issuetype', 'labels', 'assignee', 'priority'],
     maxResults: 2,
   });
@@ -191,8 +201,8 @@ async function assigneeId() {
 
 async function syncOne(gh) {
   const project = env('JIRA_PROJECT_KEY');
-  const m = mapIssue(gh);
-  const twin = await findTwin(project, m.number);
+  const m = mapIssue(gh, scopeOf(process.env.JIRA_SCOPE));
+  const twin = await findTwin(project, m.number, m.twin);
   const fields = { summary: m.summary, description: m.description, labels: m.labels };
   let key = twin?.key;
 

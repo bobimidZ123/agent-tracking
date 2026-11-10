@@ -18,6 +18,9 @@ inputs:
   jira-assignee-account-id:
     description: Who new Jira issues are assigned to; defaults to the token's owner
     default: ''
+  jira-scope:
+    description: Set when several repos share one Jira project, so their issue numbers cannot collide (labels gh-<scope>-<N>, summary prefixed [scope])
+    default: ''
   github-token:
     default: ${{ github.token }}
 runs:
@@ -35,5 +38,6 @@ runs:
         JIRA_API_TOKEN: ${{ inputs.jira-api-token }}
         JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
         JIRA_ASSIGNEE_ACCOUNT_ID: ${{ inputs.jira-assignee-account-id }}
+        JIRA_SCOPE: ${{ inputs.jira-scope }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: node "$GITHUB_ACTION_PATH/jira-sync.mjs" "$MODE"

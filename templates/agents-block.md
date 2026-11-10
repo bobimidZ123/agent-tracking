@@ -1,4 +1,4 @@
-<!-- agent-tracking:start — managed by https://github.com/BohdanMoroz11/agent-tracking; change it there and re-run install -->
+<!-- agent-tracking:start — managed by https://github.com/bobimidZ123/agent-tracking; change it there and re-run install -->
 
 ## Work tracking
 

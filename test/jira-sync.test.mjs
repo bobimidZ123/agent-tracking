@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { jiraLabel, mapIssue, toAdf, TWIN_MARK } from '../jira-sync/jira-sync.mjs';
+import { jiraLabel, mapIssue, scopeOf, toAdf, TWIN_MARK } from '../jira-sync/jira-sync.mjs';
 
 const issue = (over = {}) => ({
   number: 7, title: 'Loads vanish', state: 'open', body: '', html_url: 'https://github.com/o/r/issues/7', labels: [], ...over,
@@ -55,4 +55,24 @@ test('HTML comments in the body are dropped', () => {
 test('the twin comment is recognised', () => {
   assert.equal('Mirrored to Jira as [CF-12](https://x/browse/CF-12). …'.match(TWIN_MARK)[1], 'CF-12');
   assert.equal('Mirrored to Jira as [PROJ-3](https://x/browse/PROJ-3). …'.match(TWIN_MARK)[1], 'PROJ-3');
+});
+
+test('a scope keeps two repos apart in one Jira project', () => {
+  const back = mapIssue(issue({ labels: ['bug'] }), 'backend');
+  const front = mapIssue(issue({ labels: ['bug'] }), 'frontend');
+  assert.equal(back.twin, 'gh-backend-7');
+  assert.notEqual(back.twin, front.twin);
+  assert.deepEqual(back.labels, ['github', 'backend', 'gh-backend-7', 'bug']);
+  assert.equal(back.summary, '[backend] Loads vanish (#7)');
+});
+
+test('without a scope the labels and summary stay as before', () => {
+  const m = mapIssue(issue());
+  assert.equal(m.twin, 'gh-7');
+  assert.equal(m.summary, 'Loads vanish (#7)');
+});
+
+test('a scope is made safe for a Jira label', () => {
+  assert.equal(scopeOf('Hr Backend'), 'hr-backend');
+  assert.equal(scopeOf(undefined), '');
 });

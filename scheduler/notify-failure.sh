@@ -17,13 +17,19 @@ fi
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 
-log=$(journalctl --user -u agent-tracking-brief.service --since "-15min" -o cat --no-pager 2>/dev/null | tail -8)
+# On macOS, run-brief.sh passes the run's own log and its commands; systemd reads the journal.
+if [[ -n "${AGENT_TRACKING_FAILURE_LOG:-}" ]]; then
+  log=$(tail -8 "$AGENT_TRACKING_FAILURE_LOG" 2>/dev/null)
+else
+  log=$(journalctl --user -u agent-tracking-brief.service --since "-15min" -o cat --no-pager 2>/dev/null | tail -8)
+fi
+hint="${AGENT_TRACKING_FAILURE_HINT:-Check: journalctl --user -u agent-tracking-brief.service
+Retry: systemctl --user start agent-tracking-brief.service}"
 text="⚠️ agent-tracking: the morning brief failed on $(hostname), so it was not sent.
 
 ${log:-no log lines found}
 
-Check: journalctl --user -u agent-tracking-brief.service
-Retry: systemctl --user start agent-tracking-brief.service"
+${hint}"
 
 curl -sS -o /dev/null -w '%{http_code}\n' "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
   --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "text=${text}"

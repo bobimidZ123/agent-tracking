@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The morning brief on macOS. Installed by scheduler/macos/install.sh, which
+     fills in the paths and the local hour that is 08:00 in Kyiv. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.agent-tracking.brief</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>%KIT%/scheduler/macos/run-brief.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>%PATH%</string>
+    <key>HOME</key>
+    <string>%HOME%</string>
+  </dict>
+  <!-- launchd runs a missed time once the Mac wakes; a Mac that was shut down skips it. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>%HOUR%</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>%LOGDIR%/launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>%LOGDIR%/launchd.err.log</string>
+</dict>
+</plist>

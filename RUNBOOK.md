@@ -19,11 +19,12 @@ You only do this the first time.
       ```
 
       A private chat id is a positive number; a group id is negative. **The number before the `:` in the bot token is the bot's own id, not a chat id**: using it fails with "the bot can't send messages to the bot". If nothing prints, send the bot `/start` first.
-3. **This kit** cloned locally: `git clone git@github.com:BohdanMoroz11/agent-tracking.git ~/projects/agent-tracking`, with `gh` logged in and Node 22+.
+3. **This kit** cloned locally: `git clone git@github.com:bobimidZ123/agent-tracking.git ~/projects/agent-tracking`, with `gh` logged in and Node 22+.
 4. **The brief timer** on the devbox, which sends the morning brief at 08:00 Kyiv ([how it works](HOW-IT-WORKS.md#the-morning-brief)):
    1. `claude` installed and logged in, with the same settings you work with (it runs in auto mode and reads production the way your sessions do), and `gh` logged in.
    2. `~/.config/agent-tracking/telegram.env`, mode 600, with `TELEGRAM_BOT_TOKEN=…` and `TELEGRAM_CHAT_ID=…`. The brief and the failure alert are sent with it.
-   3. `~/projects/agent-tracking/scheduler/install.sh`. It installs a systemd user timer, and creates `~/.config/agent-tracking/repos`, the list of repos the brief covers. Then test it **through systemd**, as the script prints. A run from your own shell can pass while the timer fails, as [HOW-IT-WORKS](HOW-IT-WORKS.md#the-morning-brief) explains.
+   3. **On a Mac**, run `scheduler/macos/install.sh` instead: a launchd agent at the local hour that is 08:00 Kyiv, logging to `~/Library/Logs/agent-tracking/brief.log`, with the same failure alert. Test it with `launchctl kickstart gui/$(id -u)/com.agent-tracking.brief`. A Mac asleep at that hour sends the brief on waking; one that is shut down skips the day. Skip the next step.
+   4. `~/projects/agent-tracking/scheduler/install.sh`. It installs a systemd user timer, and creates `~/.config/agent-tracking/repos`, the list of repos the brief covers. Then test it **through systemd**, as the script prints. A run from your own shell can pass while the timer fails, as [HOW-IT-WORKS](HOW-IT-WORKS.md#the-morning-brief) explains.
 
 ## Per project
 
@@ -98,6 +99,8 @@ gh variable set JIRA_PROJECT_KEY --repo $REPO --body KEY
 gh workflow run tracking-jira-sync.yml --repo $REPO -f mode=backfill -f dry_run=false
 ```
 
+**Several repos in one Jira project.** Give each repo a scope before the backfill, so their issue numbers do not collide (both repos have a #7): `gh variable set JIRA_SCOPE --repo $REPO --body backend`. Its Jira issues then carry the labels `backend` and `gh-backend-7`, and their summaries start with `[backend]`. Set it before the first sync: changing it later makes the next event create new Jira issues for issues already mirrored under the old label, unless their `Mirrored to Jira as KEY` comment is there.
+
 From now on, every issue change syncs on its own. New Jira issues are assigned to the token's owner; set the `JIRA_ASSIGNEE_ACCOUNT_ID` variable to assign them to someone else.
 
 ### 5. Morning brief
@@ -137,4 +140,4 @@ The printed run already does the due checks, so it may comment on issues. From n
 - **`Jira refused the priority field`:** Priority is not on that issue type's layout. The sync carries on without it.
 - **A duplicate Jira issue:** each GitHub issue gets a `Mirrored to Jira as KEY` comment, and the sync follows it. Deleting that comment makes the next event create a second issue.
 - **No brief one day:** see [HOW-IT-WORKS.md → When the brief doesn't arrive](HOW-IT-WORKS.md#when-the-brief-doesnt-arrive).
-- **An org blocks the action:** the org's Actions settings must allow actions from `BohdanMoroz11/agent-tracking`, or all actions.
+- **An org blocks the action:** the org's Actions settings must allow actions from `bobimidZ123/agent-tracking`, or all actions.
